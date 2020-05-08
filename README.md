@@ -2,7 +2,7 @@
 
 NLP analysis of Term Frequency - Inverse Document Frequency using Hadoop
 
-Khan_Rafi: Khinshan Khan and Shakil Rafi
+Sam_Eldesouki: Ethan Sam and Merna Eldesouki
 
 ## Requirements
 
