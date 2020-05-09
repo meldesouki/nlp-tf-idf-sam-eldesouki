@@ -19,14 +19,14 @@ DIS_REGEX = re.compile('^(dis)_[^ ]+_\\1$')
 QUERY = ""
 
 # Convert every line in the text to a document
-def txt_to_doc(txt):
+def text_to_document(txt):
     #Python verb which splits text into words
     splitted = txt.split()
     # return (document id, words in doc)
     return splitted[0], [w for w in splitted[1:] if DIS_REGEX.match(w) or w == QUERY]
 
 # Split a document into words 
-def doc_to_words(doc):
+def document_to_words(doc):
     words = doc[1]
     num_words = len(words)
     ret = []
@@ -47,41 +47,40 @@ if __name__ == '__main__':
     output.write(f'Query: {QUERY}\n')
 
     #Get file as input
-    txt = sc.textFile(filename)
-    docs = txt.map(txt_to_doc)
+    text = sc.textFile(filename)
+    documents = txt.map(text_to_document)
 
-    doc_count = docs.count()
+    document_count = documents.count()
     output.write(f'Number of documents: {doc_count}\n')
       #Add  a and b
       #The flatMap() is used to produce multiple output elements for 
       #each input element. When using map(), the function we provide 
       #to flatMap() is called individually for each element in our input RDD. 
       #Instead of returning a single element, an iterator with the return values is returned.
-    words_by_doc = docs.flatMap(doc_to_words) \
+    words_by_document = documents.flatMap(document_to_words) \
             .reduceByKey(lambda a, b: a + b) # term count per doc
-    tf = words_by_doc.map(lambda word: (word[0][2], [(word[0][0], word[1]/word[0][1])])) \
+    tf = words_by_document.map(lambda word: (word[0][2], [(word[0][0], word[1]/word[0][1])])) \
             .reduceByKey(lambda a, b: a + b)
 
     #Operates on key/value pairs and merges the value for each key
 
     # key: word, value: (idf, [(docid, tf)])
-    tf_idf = tf.map(lambda word: (word[0],
-        (math.log(doc_count / len(word[1]), 10), word[1])))
+    idf = tf.map(lambda word: (word[0],(math.log(document_count / len(word[1]), 10), word[1])))
  
     # key: word, value: [(docid, tf*idf)]
-    tf_idf_merged = tf_idf.map(lambda word: (word[0], {i[0]: word[1][0] * i[1] for i in word[1][1]}))
+    tf_idf_merged = idf.map(lambda word: (word[0], {i[0]: word[1][0] * i[1] for i in word[1][1]}))
 
 
-    sorted_tf_idf = tf_idf_merged.sortByKey()
+    sorted_tf_idf = tf_idf.sortByKey()
     q = sorted_tf_idf.lookup(QUERY)
 
     q = [i for i in q]
     q_norm = sum(map(lambda x: x ** 2, q[0].values())) ** (1/2)
 
-    similartities = tf_idf_merged.map(lambda w: (w[0], sum([q[0][elem] * w[1][elem] for elem in q[0].keys() & w[1].keys()]) / (sum(map(lambda x: x ** 2, w[1].values())) ** (1/2) * q_norm)))
+    similar = tf_idf.map(lambda w: (w[0], sum([q[0][element] * w[1][element] for element in q[0].keys() & w[1].keys()]) / (sum(map(lambda x: x ** 2, w[1].values())) ** (1/2) * q_norm)))
       
     # take top 5 from ordered the pair in descending order
-    terms = similartities.takeOrdered(6, key=lambda word: -word[1])
+    terms = similar.takeOrdered(6, key=lambda word: -word[1])
 
     output.write(f'\nTop 5 similar to {QUERY}:\n')
     # We skip the query term because that matches itself (~1.0 score)
