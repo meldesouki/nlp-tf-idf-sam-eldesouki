@@ -1,6 +1,8 @@
-# nlp-tf-idf-hadoop
+﻿# nlp_tf_idf_hadoop
 
-NLP analysis of Term Frequency - Inverse Document Frequency using Hadoop
+NLP analysis of Term Frequency:
+
+Inverse Document Frequency using Hadoop
 
 Sam_Eldesouki: Ethan Sam and Merna Eldesouki
 
@@ -9,27 +11,39 @@ Sam_Eldesouki: Ethan Sam and Merna Eldesouki
 - Apache Spark
   - have `pyspark` on path
 - Python 3
-  - Note 3.8 and above do not work well with spark
-- Python Packages properly in environment:
+  - Note 3.8 and above do not work well with pyspark
+- Import these Python Packages in environment:
   - math
   - re
   - sys
-## Run
 
-One can run the project two ways:
 
-- Traditional Way
+  To get pyspark:
+  1 - pip3 install pyspark
+  (If on windows, add SPARK_HOME environment variable)
+
+  To get hadoop
+  1 -  
+
+##Note：
+- F-strings require at least python3.6 to run correctly
+- Python3.8 and above tends to cause issues for pyspark
+- Python3.7 tends to work best
+
+To run this project:
+
+-Using Ubuntu bash
 
 ```bash
-spark-submit app.py <file_to_parse> <query_term>
+python3.7 spark-submit app.py <file_to_parse> <query_term>
 cat output
 ```
 
-- Abstracted Way
+- Abstraction
 
 ```bash
 make FILE=<file_to_parse> QUERY=<query_term>
 ```
 
 ## Notes
-- Running the program will write relevant output to `output` rather than stdout
+- Output will be written to output.txt
