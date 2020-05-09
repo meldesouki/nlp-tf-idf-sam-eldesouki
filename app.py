@@ -29,8 +29,7 @@ def doc_to_words(doc):
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
-        print('Invalid number of arguments, program expects only filename '
-              'relative to `data` directory to analyze and query term.')
+        print('Incorrect number of arguments. Must have file name and query term.')
         exit(0)
 
     filename = sys.argv[1]
@@ -44,7 +43,7 @@ if __name__ == '__main__':
     docs = txt.map(txt_to_doc)
 
     doc_count = docs.count()
-    output.write(f'Document count: {doc_count}\n')
+    output.write(f'Number of documents: {doc_count}\n')
 
     words_by_doc = docs.flatMap(doc_to_words) \
             .reduceByKey(lambda a, b: a + b) # term count per doc
@@ -57,7 +56,7 @@ if __name__ == '__main__':
 
     # k: word, v: [(docid, tf*idf)]
     tf_idf_merged = tf_idf.map(lambda word: (word[0], {i[0]: word[1][0] * i[1] for i in word[1][1]}))
-    # DEBUG: tf_idf_merged.saveAsTextFile('tf_idf')
+
 
     sorted_tf_idf = tf_idf_merged.sortByKey()
     q = sorted_tf_idf.lookup(QUERY)
