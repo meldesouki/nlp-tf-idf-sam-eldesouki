@@ -8,17 +8,23 @@ import sys
 import re
 import math
 import pyspark
-
+# Local[*] is used to run spark locally with as many worker threads as logical cores on your machine
+# nlp_tf_idf is the name of the application
+#Gateway to pyspark
 sc = pyspark.SparkContext('local[*]', 'nlp_tf_idf')
 
+#This module provides regular expression matching operations similar to those found in Perl.
 DIS_REGEX = re.compile('^(dis)_[^ ]+_\\1$')
 QUERY = ""
 
+# Convert every line in the text to a document
 def txt_to_doc(txt):
+    #Python verb which splits text into words
     splitted = txt.split()
-    # return (docid, words)
+    # return (document id, words in doc)
     return splitted[0], [w for w in splitted[1:] if DIS_REGEX.match(w) or w == QUERY]
 
+# Split a document into words 
 def doc_to_words(doc):
     words = doc[1]
     num_words = len(words)
@@ -36,9 +42,10 @@ if __name__ == '__main__':
 
     QUERY = sys.argv[2]
     output = open('output', 'w')
-
+    # Write F-String to file 
     output.write(f'Query: {QUERY}\n')
 
+    #Get file as input
     txt = sc.textFile(filename)
     docs = txt.map(txt_to_doc)
 
