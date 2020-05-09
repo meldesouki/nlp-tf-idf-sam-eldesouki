@@ -23,7 +23,8 @@ Sam_Eldesouki: Ethan Sam and Merna Eldesouki
   (If on windows, add SPARK_HOME environment variable)
 
   To get hadoop
-  1 -  
+  1 -  Download from Apache's website
+  2 -  Edit hadoop-env.sh to set java path
 
 ##Note：
 - F-strings require at least python3.6 to run correctly
@@ -35,7 +36,7 @@ To run this project:
 -Using Ubuntu bash
 
 ```bash
-python3.7 spark-submit app.py <file_to_parse> <query_term>
+spark-submit app.py <file_to_parse> <query_term>
 cat output
 ```
 
