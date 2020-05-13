@@ -8,7 +8,6 @@ import sys
 import re
 import math
 import pyspark
-
 # Local[*] is used to run spark locally with as many worker threads as logical cores on your machine
 # nlp_tf_idf is the name of the application
 #Gateway to pyspark
@@ -19,14 +18,14 @@ DIS_REGEX = re.compile('^(dis)_[^ ]+_\\1$')
 QUERY = ""
 
 # Convert every line in the text to a document
-def text_to_document(txt):
+def txt_to_doc(txt):
     #Python verb which splits text into words
     splitted = txt.split()
     # return (document id, words in doc)
     return splitted[0], [w for w in splitted[1:] if DIS_REGEX.match(w) or w == QUERY]
 
 # Split a document into words 
-def document_to_words(doc):
+def doc_to_words(doc):
     words = doc[1]
     num_words = len(words)
     ret = []
@@ -34,10 +33,10 @@ def document_to_words(doc):
         ret.append(((doc[0], num_words, word), 1))
     return ret
 
-#Reject # of arguments if not 3
 if __name__ == '__main__':
     if len(sys.argv) != 3:
-        print('Incorrect number of arguments. Must have file name and query term.')
+        print('Invalid number of arguments, program expects only filename '
+              'relative to `data` directory to analyze and query term.')
         exit(0)
 
     filename = sys.argv[1]
@@ -48,47 +47,37 @@ if __name__ == '__main__':
     output.write(f'Query: {QUERY}\n')
 
     #Get file as input
-    text = sc.textFile(filename)
-    documents = txt.map(text_to_document)
+    txt = sc.textFile(filename)
+    docs = txt.map(txt_to_doc)
 
-    document_count = documents.count()
-    output.write(f'Number of documents: {doc_count}\n')
-      #Add  a and b
-      #The flatMap() is used to produce multiple output elements for 
-      #each input element. When using map(), the function we provide 
-      #to flatMap() is called individually for each element in our input RDD. 
-      #Instead of returning a single element, an iterator with the return values is returned.
-   
-    words_by_document = documents.flatMap(document_to_words) \
-            .reduceByKey(lambda a, b: a + b) # Number of terms per document
+    doc_count = docs.count()
+    output.write(f'Document count: {doc_count}\n')
 
-    # 1 Generate the term frequency - Split the document into words and divide by the total term count 
-    tf = words_by_document.map(lambda word: (word[0][2], [(word[0][0], word[1]/word[0][1])])) \
+    words_by_doc = docs.flatMap(doc_to_words) \
+            .reduceByKey(lambda a, b: a + b) # term count per doc
+    tf = words_by_doc.map(lambda word: (word[0][2], [(word[0][0], word[1]/word[0][1])])) \
             .reduceByKey(lambda a, b: a + b)
 
-    #Operates on key/value pairs and merges the value for each key
+    # k: word, v: (idf, [(docid, tf)])
+    tf_idf = tf.map(lambda word: (word[0],
+        (math.log(doc_count / len(word[1]), 10), word[1])))
 
-    # 2 key: word, value: (idf, [(docid, tf)])
-    idf = tf.map(lambda word: (word[0],(math.log(document_count / len(word[1]), 10), word[1])))
- 
-    # 3 key: word, value: [(docid, tf*idf)]
-    # score = tf_idf_merged = tf * idf 
-    # score = term frequency * (number of docs/number of docs appeared)
-    tf_idf_merged = idf.map(lambda word: (word[0], {i[0]: word[1][0] * i[1] for i in word[1][1]}))
+    # k: word, v: [(docid, tf*idf)]
+    tf_idf_merged = tf_idf.map(lambda word: (word[0], {i[0]: word[1][0] * i[1] for i in word[1][1]}))
+    # DEBUG: tf_idf_merged.saveAsTextFile('tf_idf')
 
-
-    sorted_tf_idf = tf_idf.sortByKey()
+    sorted_tf_idf = tf_idf_merged.sortByKey()
     q = sorted_tf_idf.lookup(QUERY)
 
     q = [i for i in q]
     q_norm = sum(map(lambda x: x ** 2, q[0].values())) ** (1/2)
-    #Similarity
-    similar = tf_idf.map(lambda w: (w[0], sum([q[0][element] * w[1][element] for element in q[0].keys() & w[1].keys()]) / (sum(map(lambda x: x ** 2, w[1].values())) ** (1/2) * q_norm)))
-      
-    # take top 5 from ordered the pair in descending order
-    terms = similar.takeOrdered(6, key=lambda word: -word[1])
 
-    output.write(f'\nTop 5 similar to {QUERY}:\n')
-    # We skip the query term because that matches itself (~1.0 score)
+    similartities = tf_idf_merged.map(lambda w: (w[0], sum([q[0][elem] * w[1][elem] for elem in q[0].keys() & w[1].keys()]) / (sum(map(lambda x: x ** 2, w[1].values())) ** (1/2) * q_norm)))
+
+    # take top 20 from ordered the pair in descending order
+    terms = similartities.takeOrdered(21, key=lambda word: -word[1])
+
+    output.write(f'\nTop 20 similar to {QUERY}:\n')
+    # query should match itself (~1.0 score), so we skip that
     output.writelines([f'{word} {item}\n' for (word, item) in terms if word != QUERY])
     output.close()
