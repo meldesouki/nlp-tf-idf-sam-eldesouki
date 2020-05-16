@@ -48,32 +48,32 @@ if __name__ == '__main__':
 
     QUERY = sys.argv[2]
     output = open('output', 'w')
-    # Write F-String to file 
+    # Write the string to file
     output.write(f'Query: {QUERY}\n')
 
     #Get file as input
     txt = sc.textFile(filename)
-    #docs = a tuple of the doc_id and the rest of the string 
-    # apply a function on all the elements of specified iterable 
-    # and return map object. 
-  
-    # docs is a map object is an iterator, so 
-    # we can iterate over its elements. We can also convert map object to sequence objects such as list, tuple
+
+
+    # map() applies a function on all the elements of a map object
+    # docs is a map object, aka a key/value pair so we can iterate over its elements via the key. 
+    # We can also convert map object to sequence objects such as list or tuple
     docs = txt.map(txt_to_doc)
 
-    #The count() method returns the number of occurrences of an element in a list - perform count on map-object
+
     doc_count = docs.count()
     output.write(f'Number of documents: {doc_count}\n')
-      #Add  a and b
-      #The flatMap() is used to produce multiple output elements for 
-      #each input element. When using map(), the function we provide 
-      #to flatMap() is called individually for each element in our input RDD. 
-      #Instead of returning a single element, an iterator with the return values is returned.
-      #Flattened into an array - key/value pair turned into an array
+
+      #When using flatMap(), the function we provide 
+      # is called individually for each element in our input RDD.
+      # The input is a key/value pair of ( key：doc_id, value: document )
     words_by_doc = docs.flatMap(doc_to_words) \
             .reduceByKey(lambda a, b: a + b) # term count per doc
     tf = words_by_doc.map(lambda word: (word[0][2], [(word[0][0], word[1]/word[0][1])])) \
             .reduceByKey(lambda a, b: a + b) #tf formula from Lecture 9, slide 64
+    #We use reduceByKey to sum the same terms per document on line 71
+    #Map is 1:1, returns a list of pairs, aka (key: doc_id, value: [(word, freq),(word, freq),(word, freq)...] )  
+    # list of pairs = associative array, therefore we are using stripes/.
 
     #Spark RDD reduceByKey function merges the values for each key using an associative 
     #reduce function. Basically reduceByKey function works only for RDDs which contains key 
@@ -82,8 +82,8 @@ if __name__ == '__main__':
 
 
     #Operates on key/value pairs and merges the value for each key
-
-    # key: word, value: (idf, [(docid, tf)])
+    # Input - (key: doc_id, value: [(word, freq),(word, freq),(word, freq)...] )
+    # Output - key: word, value: (idf, [(docid, tf)])
     tf_idf = tf.map(lambda word: (word[0],
         (math.log(doc_count / len(word[1]), 10), word[1]))) #idf formula from Lecture
  
@@ -95,13 +95,14 @@ if __name__ == '__main__':
     #It receives key-value pairs (K, V) as an input, sorts the elements in 
     #ascending or descending order and generates a dataset in an order.
     
+    #sortByKey Spark Function
     sorted_tf_idf = tf_idf_merged.sortByKey()
     q = sorted_tf_idf.lookup(QUERY)
 
     q = [i for i in q]
     q_norm = sum(map(lambda x: x ** 2, q[0].values())) ** (1/2)
 
-    # Apply our formula to retrieve the term - term frequency
+    # Apply our formula to retrieve the term weight 
     similartities = tf_idf_merged.map(lambda w: (w[0], sum([q[0][elem] * w[1][elem] for elem in q[0].keys() & w[1].keys()]) / (sum(map(lambda x: x ** 2, w[1].values())) ** (1/2) * q_norm)))
       
     # take top 5 from ordered the pair in descending order
