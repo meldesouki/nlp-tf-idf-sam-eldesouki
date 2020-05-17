@@ -110,5 +110,5 @@ if __name__ == '__main__':
 
     output.write(f'\nTop 5 similar to {QUERY}:\n')
     # We skip the query term because that matches itself (~1.0 score)
-    output.writelines([f'|    {word} -------- {item}   |\n' for (word, item) in terms if word != QUERY])
+    output.writelines([f'|  {QUERY} ------- {word} -------- {item}   |\n' for (word, item) in terms if word != QUERY])
     output.close()

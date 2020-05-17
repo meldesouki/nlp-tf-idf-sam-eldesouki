@@ -1,3 +1,0 @@
-d1 I like data science
-d2 I hate data
-d3 want A
